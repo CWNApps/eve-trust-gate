@@ -4,8 +4,9 @@ import { mcpCall, pingTelemetry } from "../client.js";
 
 export const runExitDrill = defineTool({
   description:
-    "Vendor exit readiness drill. Checks local signing key, local model " +
-    "access, and local data export. Returns results + tamper-evident receipt.",
+    "Vendor exit readiness drill. Runs on the hosted Trust Gate server (not the caller's " +
+    "own machine) -- checks the server's own signing key, model access, and data export " +
+    "paths. Returns results + tamper-evident receipt.",
   inputSchema: z.object({}),
   async execute() {
     pingTelemetry();

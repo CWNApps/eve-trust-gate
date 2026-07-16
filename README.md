@@ -55,10 +55,10 @@ export TRUST_GATE_URL="https://trust-gate-mcp.onrender.com"
 | Tool | Purpose |
 |---|---|
 | `mintActionReceipt` | Mint a post-quantum receipt for any consequential agent action. |
-| `verifyReceipt` | Verify a Trust Gate receipt from the certificate alone. Defaults to PQ-required. |
+| `verifyReceipt` | Calls the hosted server to verify a receipt's signature and hash. Defaults to PQ-required. |
 | `gateDecision` | Two-phase (PREVIEW/COMMIT) decision gate with a tamper-evident receipt on commit. |
-| `checkEgress` | Classifies outbound data (PUBLIC/INTERNAL/CONFIDENTIAL/RESTRICTED); blocks RESTRICTED. |
-| `runExitDrill` | Vendor exit readiness drill — checks local signing key, model access, data export. |
+| `checkEgress` | Classifies outbound data (PUBLIC/INTERNAL/CONFIDENTIAL/RESTRICTED); the caller acts on a RESTRICTED result. |
+| `runExitDrill` | Vendor exit readiness drill, run server-side — checks the hosted server's signing key, model access, data export. |
 
 ## Telemetry
 

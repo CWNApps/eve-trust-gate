@@ -1,0 +1,14 @@
+{
+  "name": "eve-trust-gate-demo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "eve dev"
+  },
+  "dependencies": {
+    "eve": "^0.24.4",
+    "cwn-eve-trust-gate": "^0.1.0",
+    "zod": "^4.0.0"
+  }
+}

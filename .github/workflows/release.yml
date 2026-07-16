@@ -1,0 +1,96 @@
+name: Publish to npm
+
+# Trusted Publishing via OIDC. No NPM_TOKEN secret needed.
+# npmjs.com must be pre-configured with a Trusted Publisher matching:
+#   owner       = CWNApps
+#   repository  = eve-trust-gate
+#   workflow    = release.yml
+#   environment = npm
+#
+# Requires npm CLI >=11.5.1 and Node >=22.14.0 (docs.npmjs.com/trusted-publishers).
+# registry-url must be set explicitly and NODE_AUTH_TOKEN must NOT be set, or npm
+# falls back to the legacy token path instead of OIDC.
+#
+# All third-party actions pinned to full SHA per pol.ops.security_pipeline, verified
+# live against the GitHub API at write time (not from memory or codex output).
+# Codex APPROVE-WITH-EDITS applied (pol.must_do.150) before first push.
+
+on:
+  push:
+    tags:
+      # Only fire on semver release tags (v0.1.0, v1.2.3). Excludes scratch tags
+      # like v0.1.0-dev that would otherwise trigger a noisy failure from npm.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+# Deny everything at the workflow level; each job re-grants the minimum it needs.
+permissions: {}
+
+# Serialize concurrent publish attempts for the same ref (e.g. tag re-push).
+# cancel-in-progress: false so an in-flight publish is allowed to complete.
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build + test + pack
+    runs-on: ubuntu-latest
+    # Defense-in-depth: only run for CWNApps-owned forks (OIDC subject claim
+    # already prevents fork publishes, but this guard short-circuits earlier).
+    if: github.repository_owner == 'CWNApps'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: '22.14.0'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run adversarial + unit tests
+        run: npm test
+
+      - name: Pack tarball
+        run: npm pack
+
+      - name: Show packed artifact
+        run: ls -la ./*.tgz
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: npm-tarball
+          path: ./*.tgz
+
+  publish:
+    name: Publish to npm via Trusted Publishing (OIDC)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'CWNApps'
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/cwn-eve-trust-gate
+    permissions:
+      id-token: write   # required to mint the OIDC token npm exchanges
+      contents: read    # belt-and-braces if a future step adds checkout
+
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: npm-tarball
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: '22.14.0'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        # No NODE_AUTH_TOKEN — OIDC token is minted automatically based on the
+        # Trusted Publisher record. npm auto-generates provenance attestations
+        # by default when publishing via Trusted Publishing.
+        run: npm publish ./*.tgz
